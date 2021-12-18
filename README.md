@@ -4,6 +4,8 @@
 
 ANTLR4 grammar based Nip rule evaluator for C#
 
+Nip files are used by Diablo 2 Kolbot botting framework, for deciding what items to pick up/identify/sell.
+
 ### Why
 
 Mostly wanted to learn ANTLR and see if I can write something that parses and evaluates the grammar.
