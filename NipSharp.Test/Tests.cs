@@ -61,7 +61,7 @@ namespace NipSharp.Test
             };
             
             matcher.AddRule(
-                "[type] == amulet && [quality] == crafted # [itemaddclassskills] == 2 && [fcr] >= 5 && ([dexterity] >= 10 || [strength] >= 10) && (([coldresist]+[fireresist] >= 30) || ([coldresist]+[lightresist] >= 30) || ([fireresist]+[lightresist] >= 30)) # [maxquantity] == 30"
+                "[type] == amulet && [quality] == crafted && [flag] == identified && [prefix] == 10 # [itemaddclassskills] == 2 && [fcr] >= 5 && ([dexterity] >= 10 || [strength] >= 10) && (([coldresist]+[fireresist] >= 30) || ([coldresist]+[lightresist] >= 30) || ([fireresist]+[lightresist] >= 30)) # [maxquantity] == 30"
             );
 
             var result = matcher.Match(item);
@@ -181,27 +181,39 @@ namespace NipSharp.Test
             var matcher = new Matcher();
             var lines = 0;
             var failed = 0;
+            var invalidAlias = 0;
+            var unknownProperty = 0;
             foreach (string enumerateFile in Directory.EnumerateFiles(
                 directoryName, "*.nip", SearchOption.AllDirectories
             ))
             {
                 foreach (string readLine in File.ReadLines(enumerateFile))
                 {
-                    lines += 1;
+                    lines++;
                     try
                     {
                         matcher.AddRule(readLine);
                     }
+                    catch (InvalidAliasException e)
+                    {
+                        //Console.WriteLine($"Failed to parse: {readLine}: {e.Message}");
+                        invalidAlias++;
+                    }
+                    catch (UnknownPropertyNameException e)
+                    {
+                        //Console.WriteLine($"Failed to parse: {readLine}: {e.Message}");
+                        unknownProperty++;
+                    }
                     catch (Exception e)
                     {
                         Console.WriteLine($"Failed to parse: {readLine}: {e.Message}");
-                        failed += 1;
+                        failed++;
                     }
                 }
             }
 
-            Console.WriteLine($"Failed to parse {failed} out of {lines}");
-            var expectedFailures = 284;
+            Console.WriteLine($"Failed to parse {failed} out of {lines}. {invalidAlias} has invalid aliases, {unknownProperty} had unknown props.");
+            var expectedFailures = 8;
             Assert.LessOrEqual(failed, expectedFailures);
         }
     }

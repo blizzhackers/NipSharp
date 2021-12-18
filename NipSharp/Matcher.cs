@@ -10,8 +10,8 @@ namespace NipSharp
 {
     public class Matcher
     {
-        private static readonly Regex ReplaceGetStat = new Regex(@"item.getStatEx\(([^)]+)\)");
-        private readonly List<Func<Dictionary<string, int>, Result>> _rules = new();
+        private static readonly Regex ReplaceGetStat = new(@"item.getStatEx\(([^)]+)\)");
+        private readonly List<Func<Dictionary<string, float>, Result>> _rules = new();
 
         public Matcher()
         {
@@ -50,7 +50,7 @@ namespace NipSharp
             var lineExpression = parser.line();
 
             var valueBag = Expression.Parameter(
-                typeof(Dictionary<string, int>), "valueBag"
+                typeof(Dictionary<string, float>), "valueBag"
             );
             var matchExpression = new ExpressionBuilder(valueBag).Visit(lineExpression);
 
@@ -60,7 +60,7 @@ namespace NipSharp
                 Expression.Assign(result, matchExpression),
                 result
             );
-            var ruleLambda = Expression.Lambda<Func<Dictionary<string, int>, Result>>(block, valueBag).Compile();
+            var ruleLambda = Expression.Lambda<Func<Dictionary<string, float>, Result>>(block, valueBag).Compile();
             _rules.Add(ruleLambda);
         }
 
@@ -72,7 +72,7 @@ namespace NipSharp
 
             var result = Result.Sell;
 
-            foreach (Func<Dictionary<string, int>, Result> rule in _rules)
+            foreach (Func<Dictionary<string, float>, Result> rule in _rules)
             {
                 int otherCount = otherValuesBags.Count(o => rule.Invoke(o) == Result.Keep);
                 valueBag["currentquantity"] = otherCount;
@@ -93,9 +93,9 @@ namespace NipSharp
             return result;
         }
 
-        public static Dictionary<string, int> CreateValueBag(IItem item)
+        public static Dictionary<string, float> CreateValueBag(IItem item)
         {
-            Dictionary<string, int> valueBag = new()
+            Dictionary<string, float> valueBag = new()
             {
                 { "type", item.Type },
                 { "name", item.Name },
@@ -135,7 +135,6 @@ namespace NipSharp
                     }
                 }
             }
-
             return valueBag;
         }
     }

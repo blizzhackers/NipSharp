@@ -7,15 +7,15 @@ grammar Nip;
 // Left hand side
 flagProperty: FLAG;
 affixProperty: AFFIX;
-stat: IDENTIFIER | NUMBER;
+stat: IDENTIFIER | INTEGER;
 property: IDENTIFIER;
 maxQuantity: MAXQUANTITY;
 tier: TIER;
 mercTier: MERCTIER;
 
 // Right hand side
-number: NUMBER;
-numberOrAlias: IDENTIFIER | NUMBER;
+number: INTEGER | FLOAT;
+numberOrAlias: IDENTIFIER | INTEGER;
 
 statExpr
     : statExpr op=(MUL | DIV) statExpr #statMulDivRule
@@ -57,14 +57,15 @@ line: nipRule | <EOF>;
 fragment DIGIT: [0-9];
 fragment LETTER: [a-z];
 fragment QUOTE: '\'';
-
+fragment COMMA: ',';
 FLAG: 'flag';
 AFFIX: ('prefix' | 'suffix');
 MAXQUANTITY: 'maxquantity';
 TIER: 'tier';
 MERCTIER: 'merctier';
-NUMBER: DIGIT+;
-IDENTIFIER: LETTER(LETTER | DIGIT | QUOTE)*;
+FLOAT: DIGIT+ '.' DIGIT+;
+INTEGER: DIGIT+;
+IDENTIFIER: LETTER(LETTER | DIGIT | QUOTE | COMMA)*;
 EQ: '==';
 NEQ: '!=';
 GT: '>';
@@ -79,4 +80,4 @@ ADD: '+';
 SUB: '-';
 WS: [\t\r\n ]+ -> skip;
 LINE_COMMENT: '//' ~[\r\n]* -> skip;
-BLOCK_COMMENT: '/*' .*? '*/' -> skip;
+BLOCK_COMMENT: '/*' .*? '*/' -> skip; // The wildcard catch in the middle might be wrong? But seems to work?

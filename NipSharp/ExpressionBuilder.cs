@@ -16,14 +16,14 @@ namespace NipSharp
 
         public ExpressionBuilder(ParameterExpression valueBag)
         {
-            // This is a bit of a witch-craft. We create a variable which will store the <string, int> values for each of the properties/item stats.
+            // This is a bit of a witch-craft. We create a variable which will store the <string, float> values for each of the properties/item stats.
             // This will then be used when evaluating the expression tree, but will be passed down as part of the lambda block. 
             _valueBag = valueBag;
         }
 
         public override Expression VisitNumber(NipParser.NumberContext context)
         {
-            return Expression.Constant(int.Parse(context.GetText()));
+            return Expression.Constant(float.Parse(context.GetText()));
         }
 
         public override Expression VisitNumberOrAlias(NipParser.NumberOrAliasContext context)
@@ -56,21 +56,21 @@ namespace NipSharp
             };
 
             var value = context.GetText();
-            if (int.TryParse(value, out int numericValue))
+            if (float.TryParse(value, out float numericValue))
             {
                 return Expression.Constant(numericValue);
             }
 
             if (aliases.TryGetValue(value, out var aliasNumericValue))
             {
-                return Expression.Constant(aliasNumericValue);
+                return Expression.Constant((float)aliasNumericValue);
             }
 
-            throw new ApplicationException($"Invalid alias: {value}");
+            throw new InvalidAliasException($"Invalid alias: {value}");
         }
 
         // Use -1 here, as the grammar does not allow negative numbers, so it will always evaluate to false.
-        private Expression GetValue(string variable, int defaultValue = 0)
+        private Expression GetValue(string variable, float defaultValue = 0f)
         {
             // This is grim, as C# does not have GetOrDefault, and TryGetValue is cancer.
             // _valueBag.ContainsKey(variable)
@@ -97,10 +97,10 @@ namespace NipSharp
             var name = context.GetText();
             if (!NipAliases.KnownProperties.Contains(name))
             {
-                throw new ApplicationException($"Unknown property name: {name}");
+                throw new UnknownPropertyNameException($"Unknown property name: {name}");
             }
 
-            return GetValue(name, -1);
+            return GetValue(name, -1f);
         }
 
         public override Expression VisitStatNameRule(NipParser.StatNameRuleContext context)
@@ -135,11 +135,13 @@ namespace NipSharp
 
         public override Expression VisitPropFlagRule(NipParser.PropFlagRuleContext context)
         {
-            var flag = Visit(context.numberOrAlias());
+            // Values are floats, so convert them to ints as we need to mask the flag.
+            var expectedFlag = Expression.Convert(Visit(context.numberOrAlias()), typeof(int));
+            var actualFlags = Expression.Convert(GetValue("flag"), typeof(int));
             // [flag] == identified
             // is actually:
             // [flag]&identified == identified
-            return Op(context.op, Expression.And(GetValue("flag"), flag), flag);
+            return Op(context.op, Expression.And(actualFlags, expectedFlag), expectedFlag);
         }
 
         public override Expression VisitPropAffixRule(NipParser.PropAffixRuleContext context)
@@ -153,7 +155,7 @@ namespace NipSharp
             Expression exp = Expression.Constant(false);
             for (int i = 0; i < 3; i++)
             {
-                var check = Op(context.op, GetValue($"{name}{i}", -1), value);
+                var check = Op(context.op, GetValue($"{name}{i}", -1f), value);
                 exp = Expression.Or(exp, check);
             }
 
@@ -193,7 +195,9 @@ namespace NipSharp
 
             var statMatch = context.statRule() == null ? Expression.Constant(true) : Visit(context.statRule());
 
-            var isIdentified = Expression.Equal(Expression.And(GetValue("flag"), IdentifiedFlag), IdentifiedFlag);
+            var isIdentified = Expression.Equal(
+                Expression.And(Expression.Convert(GetValue("flag"), typeof(int)), IdentifiedFlag), IdentifiedFlag
+            );
 
             var additionalMatch = context.additionalRule() == null
                 ? Expression.Constant(true)
