@@ -1,6 +1,27 @@
 # NipSharp
 
-A Antlr4 grammar based Nip rule matcher for C#
+### What is this
+
+ANTLR4 grammar based Nip rule evaluator for C#
+
+### Why
+
+Mostly wanted to learn ANTLR and see if I can write something that parses and evaluates the grammar.
+
+Also, share the grammar with others so that it would be easier to write parsers/evaluators in other languages.
+
+### How does it work
+
+The grammar parsing is done ANTLR, the expressions are then turned into a Linq expression tree and compiled for matching.
+
+### How do I use this with a different language
+
+You can use ANTLR generator to generate code for parsing the expressions for any language.
+
+Writing an evaluator in a different language will require something that allows building expression trees and evaluating them.
+Something similar to Linq Expression in C#, or something simillar that can be written by hand.
+
+### Other notes
 
 Example usage can be seen in tests project.
 
@@ -17,3 +38,7 @@ It will be clear what cases are not supported, but the TL;DR of it is:
   * Genuinely invalid aliases `claws` instead of `claw`, etc.
 * `me` syntax. Support could be added by allowing to pass in additional values.
 * `[tier]` and `[merctier]`. They are parsed, but always evaluate to true, as I am not sure how they are supposed to be used in the context of a pickit.
+
+### Debugging
+
+ANTLR v4 plugin for IntelliJ was great helping why expressions do not parse properly or where the grammar was wrong.
