@@ -32,14 +32,15 @@ which will look for every .nip file and try to parse it.
 
 It will be clear what cases are not supported, but the TL;DR of it is:
 
-* Aliases for prefixes, as I could not be bothered to find a list for them, but they don't seem to be used.
+* Aliases for affixes, as I could not be bothered to find a list for them, but they don't seem to be used.
 * Stuff that I think is genuinely invalid, i.e:
   * `[flag] == !etheral` which should be `[flag] != etheral`, because this doesn't make much sense on how flags are handled, i.e `[flag]&value == value` makes sense, `[flag]&!etheral == !etheral` probably doesn't as it turns a flag into a boolean.
-  * `name == scissorssuwayyah` which is missing the `[]`. Could be fixed, OR NOT.
-  * `[type] == ringmail` where `ringmail` is a `[name]` not a `[type]`
+  * `name == scissorssuwayyah` which is missing the `[]`. Could be fixed, but doesn't really make much sense.
+  * `[type] == ringmail` where `ringmail` is actually a `[name]` not a `[type]`.
   * Genuinely invalid aliases `claws` instead of `claw`, etc.
 * `me` syntax. Support could be added by allowing to pass in additional values.
 * `[tier]` and `[merctier]`. They are parsed, but always evaluate to true, as I am not sure how they are supposed to be used in the context of a pickit.
+* `[maxquantity]` is currently implemented in a questionable way. Effectively it requires to pass in all other items that the player has, in order to work out if `[maxquantity]` has been breached. Kolbot code is quite hard to follow to fully understand how it's used.
 
 ### Debugging
 
