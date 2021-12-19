@@ -32,15 +32,16 @@ statRule
     ;
 
 // Because we peek at the value
-propertyRule
-    : '['flagProperty']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propFlagRule
-    | '['affixProperty']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propAffixRule
+propertyRule    
+    : '['flagProperty']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propFlagRule // This is special because it's actually [flag]&value == value
+    | '['affixProperty']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propAffixRule // This is special because it creates a chain of OR's, (i.e, [prefix] == 1 turns into [prefix0] == 1 || [prefix1] == 1 || [prefix2] == 1)
     | '['property']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propRelationalRule
     | property op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propRelationalRule
     | propertyRule op=(AND | OR) propertyRule #propLogicalRule
     | '('propertyRule')' #propParenRule
     ;
 
+// These are all special as I have no idea what they really do.
 additionalRule
     : '['maxQuantity']' op=EQ statExpr #additionalMaxQuantityRule
     | '['tier']' op=EQ statExpr #additionalTierRule
