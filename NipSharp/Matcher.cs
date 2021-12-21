@@ -11,7 +11,7 @@ namespace NipSharp
     public class Matcher
     {
         private static readonly Regex ReplaceGetStat = new(@"item.getStatEx\(([^)]+)\)");
-        private readonly List<Func<Dictionary<string, float>, Result>> _rules = new();
+        private readonly List<Rule> _rules = new();
 
         public Matcher()
         {
@@ -40,28 +40,41 @@ namespace NipSharp
 
         public void AddRule(string rule)
         {
-            rule = ReplaceGetStat.Replace(rule, "[$1]");
-            rule = rule.ToLower();
+            try
+            {
+                rule = ReplaceGetStat.Replace(rule, "[$1]");
+                rule = rule.ToLower();
 
-            var inputStream = new AntlrInputStream(rule);
-            var lexer = new NipLexer(inputStream, TextWriter.Null, TextWriter.Null);
-            var tokens = new CommonTokenStream(lexer);
-            var parser = new NipParser(tokens, TextWriter.Null, TextWriter.Null);
-            var lineExpression = parser.line();
+                var inputStream = new AntlrInputStream(rule);
+                var lexer = new NipLexer(inputStream, TextWriter.Null, TextWriter.Null);
+                var tokens = new CommonTokenStream(lexer);
+                var parser = new NipParser(tokens, TextWriter.Null, TextWriter.Null);
+                var lineExpression = parser.line();
 
-            var valueBag = Expression.Parameter(
-                typeof(Dictionary<string, float>), "valueBag"
-            );
-            var matchExpression = new ExpressionBuilder(valueBag).Visit(lineExpression);
+                var valueBag = Expression.Parameter(
+                    typeof(Dictionary<string, float>), "valueBag"
+                );
+                var matchExpression = new ExpressionBuilder(valueBag).Visit(lineExpression);
 
-            ParameterExpression result = Expression.Parameter(typeof(Result), "result");
-            BlockExpression block = Expression.Block(
-                new[] { result },
-                Expression.Assign(result, matchExpression),
-                result
-            );
-            var ruleLambda = Expression.Lambda<Func<Dictionary<string, float>, Result>>(block, valueBag).Compile();
-            _rules.Add(ruleLambda);
+                ParameterExpression result = Expression.Parameter(typeof(Outcome), "result");
+                BlockExpression block = Expression.Block(
+                    new[] { result },
+                    Expression.Assign(result, matchExpression),
+                    result
+                );
+                var ruleLambda = Expression.Lambda<Func<Dictionary<string, float>, Outcome>>(block, valueBag).Compile();
+                _rules.Add(
+                    new Rule
+                    {
+                        Line = rule,
+                        Matcher = ruleLambda
+                    }
+                );
+            }
+            catch (Exception e)
+            {
+                throw new InvalidRuleException($"Invalid rule: {rule}", e);
+            }
         }
 
         public Result Match(IItem item, IEnumerable<IItem> otherItems = null)
@@ -70,27 +83,41 @@ namespace NipSharp
             var valueBag = CreateValueBag(item);
             var otherValuesBags = otherItems.Select(CreateValueBag).ToList();
 
-            var result = Result.Sell;
+            var outcome = Outcome.Sell;
+            string outcomeLine = null;
 
-            foreach (Func<Dictionary<string, float>, Result> rule in _rules)
+            foreach (Rule rule in _rules)
             {
-                int otherCount = otherValuesBags.Count(o => rule.Invoke(o) == Result.Keep);
+                int otherCount = otherValuesBags.Count(o => rule.Matcher.Invoke(o) == Outcome.Keep);
                 valueBag["currentquantity"] = otherCount;
-                switch (rule.Invoke(valueBag))
+                switch (rule.Matcher.Invoke(valueBag))
                 {
-                    case Result.Keep:
-                        return Result.Keep;
-                    case Result.Identify:
-                        result = Result.Identify;
+                    case Outcome.Keep:
+                        return new Result
+                        {
+                            Outcome = Outcome.Keep,
+                            Line = rule.Line,
+                        };
+                    case Outcome.Identify:
+                        if (outcome == Outcome.Sell)
+                        {
+                            outcome = Outcome.Identify;
+                            outcomeLine = rule.Line;
+                        }
+
                         break;
-                    case Result.Sell:
+                    case Outcome.Sell:
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
 
-            return result;
+            return new Result
+            {
+                Outcome = outcome,
+                Line = outcomeLine
+            };
         }
 
         public static Dictionary<string, float> CreateValueBag(IItem item)
@@ -115,7 +142,7 @@ namespace NipSharp
             {
                 valueBag[$"suffix{i}"] = item.Suffixes.ElementAt(i);
             }
-            
+
             foreach (IStat itemStat in item.Stats ?? Array.Empty<IStat>())
             {
                 (int, int?)[] combinations =
@@ -123,7 +150,7 @@ namespace NipSharp
                     (itemStat.Id, null),
                     (itemStat.Id, itemStat.Layer),
                 };
-                
+
                 // For each stat alias combination, put a value in the bag for that alias.
                 foreach ((int, int?) key in combinations)
                 {
@@ -135,6 +162,7 @@ namespace NipSharp
                     }
                 }
             }
+
             return valueBag;
         }
     }

@@ -8,9 +8,9 @@ namespace NipSharp
     public class ExpressionBuilder : NipBaseVisitor<Expression>
     {
         private static Expression IdentifiedFlag = Expression.Constant(NipAliases.Flag["identified"]);
-        private static Expression Sell = Expression.Constant(Result.Sell);
-        private static Expression Keep = Expression.Constant(Result.Keep);
-        private static Expression Identify = Expression.Constant(Result.Identify);
+        private static Expression Sell = Expression.Constant(Outcome.Sell);
+        private static Expression Keep = Expression.Constant(Outcome.Keep);
+        private static Expression Identify = Expression.Constant(Outcome.Identify);
 
         private readonly ParameterExpression _valueBag;
 
@@ -265,7 +265,7 @@ namespace NipSharp
         public override Expression VisitLine(NipParser.LineContext context)
         {
             var child = context.GetChild(0);
-            return child.ChildCount == 0 ? Expression.Constant(Result.Sell) : Visit(context.nipRule());
+            return child.ChildCount == 0 ? Expression.Constant(Outcome.Sell) : Visit(context.nipRule());
         }
 
         private Expression Op(IToken op, Expression left, Expression right)

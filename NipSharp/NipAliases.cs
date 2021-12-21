@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using Antlr4.Runtime.Tree.Xpath;
 
 namespace NipSharp
 {
@@ -1511,7 +1509,7 @@ namespace NipSharp
             Stat["passivemagpierce"] = (358, null);
 
             #endregion
-            
+
             // To support stuff like [52]+[23]/256 >= x
             // [52,8] >= 123
             // item.getStatEx(123, 123) >= 123
@@ -1519,7 +1517,7 @@ namespace NipSharp
             {
                 if (statValue.Item2 == null)
                 {
-                    Stat[statValue.Item1.ToString()] = (statValue.Item1, null);    
+                    Stat[statValue.Item1.ToString()] = (statValue.Item1, null);
                 }
                 else
                 {
