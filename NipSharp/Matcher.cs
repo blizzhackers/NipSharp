@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Antlr4.Runtime;
+using NipSharp.Exceptions;
 
 namespace NipSharp
 {

@@ -1,0 +1,5 @@
+# Text files use LF line endings in this repository
+*   text=auto
+
+# Diffs on these files are meaningless
+NipSharp/Generated/*           -diff

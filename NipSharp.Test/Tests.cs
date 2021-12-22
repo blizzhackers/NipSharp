@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Reflection;
+using NipSharp.Exceptions;
 using NUnit.Framework;
 
 namespace NipSharp.Test
@@ -66,7 +67,7 @@ namespace NipSharp.Test
 
             var result = matcher.Match(item);
 
-            Assert.AreEqual(Result.Keep, result);
+            Assert.AreEqual(Outcome.Keep, result.Outcome);
         }
 
         [Test]
@@ -108,7 +109,7 @@ namespace NipSharp.Test
                 }
             );
 
-            Assert.AreEqual(Result.Keep, result);
+            Assert.AreEqual(Outcome.Keep, result.Outcome);
         }
 
         [Test]
@@ -149,7 +150,7 @@ namespace NipSharp.Test
                 }
             );
             
-            Assert.AreEqual(Result.Keep, result);
+            Assert.AreEqual(Outcome.Keep, result.Outcome);
         }
 
         [Test]
@@ -163,7 +164,7 @@ namespace NipSharp.Test
                 }
             );
             
-            Assert.AreEqual(Result.Keep, result);
+            Assert.AreEqual(Outcome.Keep, result.Outcome);
         }
 
         [Test]

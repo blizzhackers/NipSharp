@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
+using NipSharp.Exceptions;
 
 namespace NipSharp
 {
@@ -34,6 +35,7 @@ namespace NipSharp
             var maybePropNameNode = context.Parent.GetChild(1).GetChild(0);
             if (maybePropNameNode is not ITerminalNode propNameNode)
             {
+                // Bad grammar somehow.
                 throw new ApplicationException($"Expected a terminal node at {maybePropNameNode.GetText()}");
             }
 
@@ -66,13 +68,14 @@ namespace NipSharp
                 return Expression.Constant((float)aliasNumericValue);
             }
 
-            throw new InvalidAliasException($"Invalid alias: {value}");
+            throw new InvalidAliasException($"Invalid alias {value} for property [{propName}]");
         }
 
         // Use -1 here, as the grammar does not allow negative numbers, so it will always evaluate to false.
         private Expression GetValue(string variable, float defaultValue = 0f)
         {
-            // This is grim, as C# does not have GetOrDefault, and TryGetValue is cancer.
+            // This is grim, as C# does not have GetOrDefault (only as extension which are not supported in lambda),
+            // and TryGetValue is cancer.
             // _valueBag.ContainsKey(variable)
             var checkIfExists = Expression.Call(_valueBag, "ContainsKey", null, Expression.Constant(variable));
             // _valueBag[variable]
@@ -86,7 +89,7 @@ namespace NipSharp
             var name = context.GetText();
             if (!NipAliases.Stat.ContainsKey(name))
             {
-                throw new ApplicationException($"Unknown stat: {name}");
+                throw new InvalidStatException($"Unknown stat: {name}");
             }
 
             return GetValue(name);
@@ -265,7 +268,7 @@ namespace NipSharp
         public override Expression VisitLine(NipParser.LineContext context)
         {
             var child = context.GetChild(0);
-            return child.ChildCount == 0 ? Expression.Constant(Outcome.Sell) : Visit(context.nipRule());
+            return child.ChildCount == 0 ? Sell : Visit(context.nipRule());
         }
 
         private Expression Op(IToken op, Expression left, Expression right)
