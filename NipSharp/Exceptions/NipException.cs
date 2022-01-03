@@ -7,7 +7,7 @@ namespace NipSharp.Exceptions
         public NipException(string message) : base(message)
         {
         }
-        
+
         public NipException(string message, Exception cause) : base(message, cause)
         {
         }

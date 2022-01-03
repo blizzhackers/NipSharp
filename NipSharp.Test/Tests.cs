@@ -11,7 +11,7 @@ namespace NipSharp.Test
     public class Tests
     {
         private Matcher matcher;
-        
+
         [SetUp]
         public void Setup()
         {
@@ -60,7 +60,7 @@ namespace NipSharp.Test
                     }
                 }
             };
-            
+
             matcher.AddRule(
                 "[type] == amulet && [quality] == crafted && [flag] == identified && [prefix] == 10 # [itemaddclassskills] == 2 && [fcr] >= 5 && ([dexterity] >= 10 || [strength] >= 10) && (([coldresist]+[fireresist] >= 30) || ([coldresist]+[lightresist] >= 30) || ([fireresist]+[lightresist] >= 30)) # [maxquantity] == 30"
             );
@@ -83,7 +83,7 @@ namespace NipSharp.Test
                         new FakeStat
                         {
                             Id = NipAliases.Stat["frw"].Item1,
-                            Value = 10, 
+                            Value = 10,
                         },
                         new FakeStat
                         {
@@ -117,7 +117,7 @@ namespace NipSharp.Test
         {
             var rule =
                 "# [frw] >= 10 && item.getStatEx(39)+item.getStatEx(41,  43) >= 50 && ([79] >= 78 || [maxmana] >= 30)";
-            
+
             matcher.AddRule(rule);
             var result = matcher.Match(
                 new FakeItem
@@ -128,7 +128,7 @@ namespace NipSharp.Test
                         new FakeStat
                         {
                             Id = NipAliases.Stat["frw"].Item1,
-                            Value = 10, 
+                            Value = 10,
                         },
                         new FakeStat
                         {
@@ -149,7 +149,7 @@ namespace NipSharp.Test
                     }
                 }
             );
-            
+
             Assert.AreEqual(Outcome.Keep, result.Outcome);
         }
 
@@ -163,7 +163,7 @@ namespace NipSharp.Test
                     Flags = NipAliases.Flag["eth"] | NipAliases.Flag["identified"]
                 }
             );
-            
+
             Assert.AreEqual(Outcome.Keep, result.Outcome);
         }
 
@@ -171,6 +171,7 @@ namespace NipSharp.Test
         public void TestBlizzhackerPickits()
         {
             //Assert.Ignore();
+            var start = DateTime.Now;
             var directoryName = Path.GetFullPath(
                 Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + @"\..\..\..\..\..\pickits"
             );
@@ -183,6 +184,8 @@ namespace NipSharp.Test
             var lines = 0;
             var failed = 0;
             var invalidAlias = 0;
+            var invalidStat = 0;
+            var invalidRule = 0;
             var unknownProperty = 0;
             foreach (string enumerateFile in Directory.EnumerateFiles(
                 directoryName, "*.nip", SearchOption.AllDirectories
@@ -197,12 +200,22 @@ namespace NipSharp.Test
                     }
                     catch (InvalidAliasException e)
                     {
-                        //Console.WriteLine($"Failed to parse: {readLine}: {e.Message}");
+                        Console.WriteLine($"Invalid alias. Failed to parse: {readLine}: {e.Message}");
                         invalidAlias++;
+                    }
+                    catch (InvalidRuleException e)
+                    {
+                        Console.WriteLine($"{e.Message}");
+                        invalidRule++;
+                    }
+                    catch (InvalidStatException e)
+                    {
+                        Console.WriteLine($"Invalid stat. Failed to parse: {readLine}: {e.Message}");
+                        invalidStat++;
                     }
                     catch (UnknownPropertyNameException e)
                     {
-                        //Console.WriteLine($"Failed to parse: {readLine}: {e.Message}");
+                        Console.WriteLine($"Unknown property. Failed to parse: {readLine}: {e.Message}");
                         unknownProperty++;
                     }
                     catch (Exception e)
@@ -213,9 +226,20 @@ namespace NipSharp.Test
                 }
             }
 
-            Console.WriteLine($"Failed to parse {failed} out of {lines}. {invalidAlias} has invalid aliases, {unknownProperty} had unknown props.");
-            var expectedFailures = 8;
-            Assert.LessOrEqual(failed, expectedFailures);
+            Console.WriteLine(
+                $"Failed to parse {failed} out of {lines}. " +
+                $"{invalidAlias} has invalid aliases, " +
+                $"{invalidRule} has invalid rules, " +
+                $"{invalidStat} has invalid stat, " +
+                $"{unknownProperty} has unknown props. " +
+                $"Duration: {DateTime.Now - start}."
+            );
+
+            Assert.LessOrEqual(failed, 0);
+            Assert.LessOrEqual(invalidAlias, 49);
+            Assert.LessOrEqual(invalidRule, 8);
+            Assert.LessOrEqual(invalidStat, 0);
+            Assert.LessOrEqual(unknownProperty, 29);
         }
     }
 }

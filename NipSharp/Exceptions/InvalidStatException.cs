@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NipSharp.Exceptions
+﻿namespace NipSharp.Exceptions
 {
     public class InvalidStatException : NipException
     {

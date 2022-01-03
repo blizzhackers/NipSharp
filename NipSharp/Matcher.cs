@@ -39,6 +39,11 @@ namespace NipSharp
             }
         }
 
+        public void Clear()
+        {
+            _rules.Clear();
+        }
+
         public void AddRule(string rule)
         {
             try
@@ -71,6 +76,10 @@ namespace NipSharp
                         Matcher = ruleLambda
                     }
                 );
+            }
+            catch (NipException)
+            {
+                throw;
             }
             catch (Exception e)
             {

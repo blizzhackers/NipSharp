@@ -1316,8 +1316,7 @@ namespace NipSharp
             Stat["itemaddcoldskilltab"] = Stat["coldskilltab"] = (188, 10);
             Stat["itemaddcursesskilltab"] = Stat["cursesskilltab"] = (188, 16);
             Stat["itemaddpoisonandboneskilltab"] = Stat["poisonandboneskilltab"] = (188, 17);
-            Stat["itemaddnecromancersummoningskilltab"] =
-                Stat["necromancersummoningskilltab"] = (188, 18);
+            Stat["itemaddnecromancersummoningskilltab"] = Stat["necromancersummoningskilltab"] = (188, 18);
             Stat["itemaddpalicombatskilltab"] = Stat["palicombatskilltab"] = (188, 24);
             Stat["itemaddoffensiveaurasskilltab"] = Stat["offensiveaurasskilltab"] = (188, 25);
             Stat["itemadddefensiveaurasskilltab"] = Stat["defensiveaurasskilltab"] = (188, 26);
