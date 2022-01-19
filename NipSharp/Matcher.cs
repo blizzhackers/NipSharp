@@ -68,7 +68,8 @@ namespace NipSharp
                     Expression.Assign(result, matchExpression),
                     result
                 );
-                var ruleLambda = Expression.Lambda<Func<Dictionary<string, float>, Outcome>>(block, valueBag).Compile();
+                var expression = Expression.Lambda<Func<Dictionary<string, float>, Outcome>>(block, valueBag);
+                var ruleLambda = expression.Compile();
                 _rules.Add(
                     new Rule
                     {
@@ -126,7 +127,7 @@ namespace NipSharp
             return new Result
             {
                 Outcome = outcome,
-                Line = outcomeLine
+                Line = outcomeLine,
             };
         }
 

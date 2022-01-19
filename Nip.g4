@@ -20,9 +20,9 @@ numberOrAlias: IDENTIFIER | INTEGER;
 statExpr
     : statExpr op=(MUL | DIV) statExpr #statMulDivRule
     | statExpr op=(ADD | SUB) statExpr #statAddSubRule
-    | '['stat']' #statNameRule
-    | number #statNumberRule
-    | '('statExpr')' #statExprParenRule
+    | op=(ADD | SUB)? '['stat']' #statNameRule
+    | op=(ADD | SUB)? number #statNumberRule
+    | op=(ADD | SUB)? '('statExpr')' #statExprParenRule
     ;
 
 statRule

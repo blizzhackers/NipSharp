@@ -10,7 +10,7 @@ namespace NipSharp.Test
 {
     public class Tests
     {
-        private Matcher matcher;
+        private Matcher matcher = new();
 
         [SetUp]
         public void Setup()
@@ -240,6 +240,71 @@ namespace NipSharp.Test
             Assert.LessOrEqual(invalidRule, 8);
             Assert.LessOrEqual(invalidStat, 0);
             Assert.LessOrEqual(unknownProperty, 29);
+        }
+
+        [Test]
+        public void TestNegativeAndTowardsZeroCase()
+        {
+            matcher.AddRule("# [itemlevelreq] <= 30 && [itemreqpercent] <= -15");
+            
+            Assert.AreEqual(matcher.Match(new FakeItem
+            {
+                Flags = NipAliases.Flag["identified"],
+            }).Outcome, Outcome.Sell);
+            
+            Assert.AreEqual(matcher.Match(new FakeItem
+            {
+                Flags = NipAliases.Flag["identified"],
+                Stats = new[]
+                {
+                    new FakeStat
+                    {
+                        Id = NipAliases.Stat["itemlevelreq"].Item1,
+                        Value = 30,
+                    },
+                    new FakeStat
+                    {
+                        Id = NipAliases.Stat["itemreqpercent"].Item1,
+                        Value = -15
+                    }
+                },
+            }).Outcome, Outcome.Keep);
+            
+            Assert.AreEqual(matcher.Match(new FakeItem
+            {
+                Flags = NipAliases.Flag["identified"],
+                Stats = new[]
+                {
+                    new FakeStat
+                    {
+                        Id = NipAliases.Stat["itemlevelreq"].Item1,
+                        Value = 31,
+                    },
+                    new FakeStat
+                    {
+                        Id = NipAliases.Stat["itemreqpercent"].Item1,
+                        Value = -15
+                    }
+                },
+            }).Outcome, Outcome.Sell);
+            
+            Assert.AreEqual(matcher.Match(new FakeItem
+            {
+                Flags = NipAliases.Flag["identified"],
+                Stats = new[]
+                {
+                    new FakeStat
+                    {
+                        Id = NipAliases.Stat["itemlevelreq"].Item1,
+                        Value = 30,
+                    },
+                    new FakeStat
+                    {
+                        Id = NipAliases.Stat["itemreqpercent"].Item1,
+                        Value = -14
+                    }
+                },
+            }).Outcome, Outcome.Sell);
         }
     }
 }

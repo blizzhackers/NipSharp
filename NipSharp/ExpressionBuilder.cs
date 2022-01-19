@@ -72,7 +72,7 @@ namespace NipSharp
         }
 
         // Use -1 here, as the grammar does not allow negative numbers, so it will always evaluate to false.
-        private Expression GetValue(string variable, float defaultValue = 0f)
+        private Expression GetValue(string variable, float defaultValue = float.NaN)
         {
             // This is grim, as C# does not have GetOrDefault (only as extension which are not supported in lambda),
             // and TryGetValue is cancer.
@@ -103,12 +103,29 @@ namespace NipSharp
                 throw new UnknownPropertyNameException($"Unknown property name: {name}");
             }
 
-            return GetValue(name, -1f);
+            return GetValue(name);
         }
 
         public override Expression VisitStatNameRule(NipParser.StatNameRuleContext context)
         {
-            return Visit(context.stat());
+            var exp = Visit(context.stat());
+            if (context.op?.Type == NipParser.SUB)
+            {
+                return Expression.Negate(exp);
+            }
+
+            return exp;
+        }
+
+        public override Expression VisitStatNumberRule(NipParser.StatNumberRuleContext context)
+        {
+            var exp = Visit(context.number());
+            if (context.op?.Type == NipParser.SUB)
+            {
+                return Expression.Negate(exp);
+            }
+
+            return exp;
         }
 
         public override Expression VisitStatAddSubRule(NipParser.StatAddSubRuleContext context)
@@ -140,7 +157,7 @@ namespace NipSharp
         {
             // Values are floats, so convert them to ints as we need to mask the flag.
             var expectedFlag = Expression.Convert(Visit(context.numberOrAlias()), typeof(int));
-            var actualFlags = Expression.Convert(GetValue("flag"), typeof(int));
+            var actualFlags = Expression.Convert(GetValue("flag", 0), typeof(int));
             // [flag] == identified
             // is actually:
             // [flag]&identified == identified
@@ -187,7 +204,13 @@ namespace NipSharp
 
         public override Expression VisitStatExprParenRule(NipParser.StatExprParenRuleContext context)
         {
-            return Visit(context.statExpr());
+            var exp = Visit(context.statExpr());
+            if (context.op?.Type == NipParser.SUB)
+            {
+                return Expression.Negate(exp);
+            }
+
+            return exp;
         }
 
         public override Expression VisitNipRule(NipParser.NipRuleContext context)
@@ -199,7 +222,7 @@ namespace NipSharp
             var statMatch = context.statRule() == null ? Expression.Constant(true) : Visit(context.statRule());
 
             var isIdentified = Expression.Equal(
-                Expression.And(Expression.Convert(GetValue("flag"), typeof(int)), IdentifiedFlag), IdentifiedFlag
+                Expression.And(Expression.Convert(GetValue("flag", 0), typeof(int)), IdentifiedFlag), IdentifiedFlag
             );
 
             var additionalMatch = context.additionalRule() == null
@@ -245,7 +268,7 @@ namespace NipSharp
 
         public override Expression VisitAdditionalMaxQuantityRule(NipParser.AdditionalMaxQuantityRuleContext context)
         {
-            return Expression.LessThan(GetValue("currentquantity"), Visit(context.statExpr()));
+            return Expression.LessThan(GetValue("currentquantity", 0), Visit(context.statExpr()));
         }
 
         public override Expression VisitAdditionalMercTierRule(NipParser.AdditionalMercTierRuleContext context)
