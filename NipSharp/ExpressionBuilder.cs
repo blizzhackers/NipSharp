@@ -71,8 +71,10 @@ namespace NipSharp
             throw new InvalidAliasException($"Invalid alias {value} for property [{propName}]");
         }
 
-        // Use -1 here, as the grammar does not allow negative numbers, so it will always evaluate to false.
-        private Expression GetValue(string variable, float defaultValue = float.NaN)
+        // Use 0 as default, as if the stat is missing, it's value is zero.
+        // However, there are some interesting cases if you forget to add stats, namely item level requirement.
+        // Then a ton of checks will start passing that.
+        private Expression GetValue(string variable, float defaultValue = 0)
         {
             // This is grim, as C# does not have GetOrDefault (only as extension which are not supported in lambda),
             // and TryGetValue is cancer.
@@ -103,7 +105,7 @@ namespace NipSharp
                 throw new UnknownPropertyNameException($"Unknown property name: {name}");
             }
 
-            return GetValue(name);
+            return GetValue(name, -1);
         }
 
         public override Expression VisitStatNameRule(NipParser.StatNameRuleContext context)
@@ -157,7 +159,7 @@ namespace NipSharp
         {
             // Values are floats, so convert them to ints as we need to mask the flag.
             var expectedFlag = Expression.Convert(Visit(context.numberOrAlias()), typeof(int));
-            var actualFlags = Expression.Convert(GetValue("flag", 0), typeof(int));
+            var actualFlags = Expression.Convert(GetValue("flag"), typeof(int));
             // [flag] == identified
             // is actually:
             // [flag]&identified == identified
@@ -222,7 +224,7 @@ namespace NipSharp
             var statMatch = context.statRule() == null ? Expression.Constant(true) : Visit(context.statRule());
 
             var isIdentified = Expression.Equal(
-                Expression.And(Expression.Convert(GetValue("flag", 0), typeof(int)), IdentifiedFlag), IdentifiedFlag
+                Expression.And(Expression.Convert(GetValue("flag"), typeof(int)), IdentifiedFlag), IdentifiedFlag
             );
 
             var additionalMatch = context.additionalRule() == null
@@ -268,7 +270,7 @@ namespace NipSharp
 
         public override Expression VisitAdditionalMaxQuantityRule(NipParser.AdditionalMaxQuantityRuleContext context)
         {
-            return Expression.LessThan(GetValue("currentquantity", 0), Visit(context.statExpr()));
+            return Expression.LessThan(GetValue("currentquantity"), Visit(context.statExpr()));
         }
 
         public override Expression VisitAdditionalMercTierRule(NipParser.AdditionalMercTierRuleContext context)
