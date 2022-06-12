@@ -13,6 +13,7 @@ namespace NipSharp
     {
         private static readonly Regex ReplaceGetStat = new(@"item.getStatEx\(([^)]+)\)");
         private readonly List<Rule> _rules = new();
+        private readonly Dictionary<string, Func<IItem, float>> _funcs = new();
 
         public Matcher()
         {
@@ -29,6 +30,16 @@ namespace NipSharp
             {
                 AddRule(line);
             }
+        }
+
+        public void RegisterFunction(string name, Func<IItem, float> func)
+        {
+            _funcs[name] = func;
+        }
+
+        public void UnregisterFunction(string name)
+        {
+            _funcs.Remove(name);
         }
 
         public void AddPath(string path)
@@ -58,13 +69,19 @@ namespace NipSharp
                 var lineExpression = parser.line();
 
                 var result = Expression.Parameter(typeof(Result), "result");
+                var item = Expression.Parameter(
+                    typeof(IItem), "item"
+                );
                 var valueBag = Expression.Parameter(
                     typeof(Dictionary<string, float>), "valueBag"
                 );
                 var meBag = Expression.Parameter(
                     typeof(Dictionary<string, float>), "meBag"
                 );
-                var matchExpression = new ExpressionBuilder(result, valueBag, meBag).Visit(lineExpression);
+                var funcs = Expression.Parameter(
+                    typeof(Dictionary<string, Func<IItem, float>>), "funcs"
+                );
+                var matchExpression = new ExpressionBuilder(result, item, valueBag, meBag, funcs).Visit(lineExpression);
 
                 BlockExpression block = Expression.Block(
                     new[] { result },
@@ -72,8 +89,8 @@ namespace NipSharp
                     result
                 );
                 var expression =
-                    Expression.Lambda<Func<Dictionary<string, float>, Dictionary<string, float>, Result>>(
-                        block, valueBag, meBag
+                    Expression.Lambda<Func<IItem, Dictionary<string, float>, Dictionary<string, float>, Dictionary<string, Func<IItem, float>>, Result>>(
+                        block, item, valueBag, meBag, funcs
                     );
 
                 var ruleLambda = expression.Compile();
@@ -102,7 +119,7 @@ namespace NipSharp
 
             foreach (Rule rule in _rules)
             {
-                var matchResult = rule.Matcher.Invoke(valueBag, meBag);
+                var matchResult = rule.Matcher.Invoke(item, valueBag, meBag, _funcs);
                 matchResult.Line = rule.Line;
                 yield return matchResult;
             }

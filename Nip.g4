@@ -9,6 +9,7 @@ flagProperty: FLAG;
 affixProperty: AFFIX;
 stat: IDENTIFIER | INTEGER;
 meProperty: IDENTIFIER;
+functionName: IDENTIFIER;
 property: IDENTIFIER;
 maxQuantity: MAXQUANTITY;
 tier: TIER;
@@ -25,6 +26,7 @@ statExpr
     | statExpr op=(ADD | SUB) statExpr #statAddSubRule
     | op=(ADD | SUB)? '['stat']' #statNameRule
     | op=(ADD | SUB)? 'me.'meProperty #statMeRule
+    | op=(ADD | SUB)? functionName'(item)' #statFunctionRule
     | op=(ADD | SUB)? number #statNumberRule
     | op=(ADD | SUB)? '('statExpr')' #statExprParenRule
     ;

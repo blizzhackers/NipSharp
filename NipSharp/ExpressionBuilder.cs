@@ -16,16 +16,23 @@ namespace NipSharp
         private static readonly Expression Identify = Expression.Constant(Outcome.Identify);
 
         private readonly ParameterExpression _result;
+        private readonly ParameterExpression _item;
         private readonly ParameterExpression _valueBag;
         private readonly ParameterExpression _meBag;
+        private readonly ParameterExpression _funcs;
 
-        public ExpressionBuilder(ParameterExpression result, ParameterExpression valueBag, ParameterExpression meBag)
+        public ExpressionBuilder(
+            ParameterExpression result, ParameterExpression item, ParameterExpression valueBag,
+            ParameterExpression meBag, ParameterExpression funcs
+        )
         {
             // This is a bit of a witch-craft. We create a variable which will store the <string, float> values for each of the properties/item stats.
             // This will then be used when evaluating the expression tree, but will be passed down as part of the lambda block.
             _result = result;
+            _item = item;
             _valueBag = valueBag;
             _meBag = meBag;
+            _funcs = funcs;
         }
 
         public override Expression VisitNumber(NipParser.NumberContext context)
@@ -92,31 +99,17 @@ namespace NipSharp
         // Use 0 as default, as if the stat is missing, it's value is zero.
         // However, there are some interesting cases if you forget to add stats, namely item level requirement.
         // Then a ton of checks will start passing that.
-        private Expression GetValue(string variable, float defaultValue = 0)
+        private Expression GetValue<T>(Expression bag, string variable, T defaultValue = default)
         {
             // This is grim, as C# does not have GetOrDefault (only as extension which are not supported in lambda),
             // and TryGetValue is cancer.
             // _valueBag.ContainsKey(variable)
-            var checkIfExists = Expression.Call(_valueBag, "ContainsKey", null, Expression.Constant(variable));
+            var checkIfExists = Expression.Call(bag, "ContainsKey", null, Expression.Constant(variable));
             // _valueBag[variable]
-            var getValue = Expression.Property(_valueBag, "Item", Expression.Constant(variable));
+            var getValue = Expression.Property(bag, "Item", Expression.Constant(variable));
+            var defaultFallback = Expression.Constant(defaultValue);
             // checkIfExists ? getValue : defaultValue;
-            return Expression.Condition(checkIfExists, getValue, Expression.Constant(defaultValue));
-        }
-
-        // Use 0 as default, as if the stat is missing, it's value is zero.
-        // However, there are some interesting cases if you forget to add stats, namely item level requirement.
-        // Then a ton of checks will start passing that.
-        private Expression GetMeValue(string variable, float defaultValue = 0)
-        {
-            // This is grim, as C# does not have GetOrDefault (only as extension which are not supported in lambda),
-            // and TryGetValue is cancer.
-            // _meBag.ContainsKey(variable)
-            var checkIfExists = Expression.Call(_meBag, "ContainsKey", null, Expression.Constant(variable));
-            // _meBag[variable]
-            var getValue = Expression.Property(_meBag, "Item", Expression.Constant(variable));
-            // checkIfExists ? getValue : defaultValue;
-            return Expression.Condition(checkIfExists, getValue, Expression.Constant(defaultValue));
+            return Expression.Condition(checkIfExists, getValue, defaultFallback);
         }
 
         public override Expression VisitStat(NipParser.StatContext context)
@@ -127,7 +120,7 @@ namespace NipSharp
                 throw new InvalidStatException($"Unknown stat: {name}");
             }
 
-            return GetValue(name);
+            return GetValue<float>(_valueBag, name);
         }
 
         public override Expression VisitProperty(NipParser.PropertyContext context)
@@ -138,7 +131,7 @@ namespace NipSharp
                 throw new UnknownPropertyNameException($"Unknown property name: {name}");
             }
 
-            return GetValue(name, -1);
+            return GetValue(_valueBag, name, -1f);
         }
 
         public override Expression VisitStatNameRule(NipParser.StatNameRuleContext context)
@@ -192,7 +185,7 @@ namespace NipSharp
         {
             // Values are floats, so convert them to ints as we need to mask the flag.
             var expectedFlag = Expression.Convert(Visit(context.numberOrAlias()), typeof(int));
-            var actualFlags = Expression.Convert(GetValue("flag"), typeof(int));
+            var actualFlags = Expression.Convert(GetValue<float>(_valueBag, "flag"), typeof(int));
             // [flag] == identified
             // is actually:
             // [flag]&identified == identified
@@ -210,7 +203,7 @@ namespace NipSharp
             Expression exp = Expression.Constant(false);
             for (int i = 0; i < 3; i++)
             {
-                var check = Op(context.op, GetValue($"{name}{i}", -1f), value);
+                var check = Op(context.op, GetValue(_valueBag, $"{name}{i}", -1f), value);
                 exp = Expression.Or(exp, check);
             }
 
@@ -257,7 +250,8 @@ namespace NipSharp
             var statMatch = context.statRule() == null ? Expression.Constant(true) : Visit(context.statRule());
 
             var isIdentified = Expression.Equal(
-                Expression.And(Expression.Convert(GetValue("flag"), typeof(int)), IdentifiedFlag), IdentifiedFlag
+                Expression.And(Expression.Convert(GetValue<float>(_valueBag, "flag"), typeof(int)), IdentifiedFlag),
+                IdentifiedFlag
             );
 
             // Always evaluates to true, but has side-effects, setting values on result object.
@@ -350,12 +344,18 @@ namespace NipSharp
         public override Expression VisitMeProperty(NipParser.MePropertyContext context)
         {
             var name = context.GetText();
-            return GetMeValue(name);
+            return GetValue<float>(_meBag, name);
         }
 
         public override Expression VisitPropMeRule(NipParser.PropMeRuleContext context)
         {
             return Op(context.op, Visit(context.meProperty()), Visit(context.numberOrAlias()));
+        }
+
+        public override Expression VisitStatFunctionRule(NipParser.StatFunctionRuleContext context)
+        {
+            var func = GetValue<Func<IItem, float>>(_funcs, context.functionName().GetText(), _ => 0f);
+            return Expression.Invoke(func, _item);
         }
 
         private Expression Op(IToken op, Expression left, Expression right)

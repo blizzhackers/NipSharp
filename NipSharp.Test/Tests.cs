@@ -202,6 +202,27 @@ namespace NipSharp.Test
         }
 
         [Test]
+        public void TestFunctions()
+        {
+            Func<IItem, float> fn = i => i.Level;
+            matcher.RegisterFunction("tierscore", fn);
+            matcher.AddRule("[name] == minormanapotion && me.charlvl < 12 # # [merctier] == me.charlvl * tierscore(item)");
+            var result = matcher.Match(
+                new FakeItem
+                {
+                    Name = NipAliases.ClassId["minormanapotion"],
+                    Level = 5
+                },
+                new FakeMe
+                {
+                    Level = 10
+                }
+            );
+            Assert.AreEqual(Outcome.Keep, result.Outcome);
+            Assert.AreEqual(5f * 10f, result.MercTier);
+        }
+
+        [Test]
         public void TestBlizzhackerPickits()
         {
             //Assert.Ignore();

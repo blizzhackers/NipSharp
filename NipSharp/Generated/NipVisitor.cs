@@ -57,6 +57,12 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitMeProperty([NotNull] NipParser.MePropertyContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="NipParser.functionName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFunctionName([NotNull] NipParser.FunctionNameContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="NipParser.property"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -118,6 +124,13 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitStatMulDivRule([NotNull] NipParser.StatMulDivRuleContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>statFunctionRule</c>
+	/// labeled alternative in <see cref="NipParser.statExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStatFunctionRule([NotNull] NipParser.StatFunctionRuleContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>statNameRule</c>
 	/// labeled alternative in <see cref="NipParser.statExpr"/>.

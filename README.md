@@ -48,6 +48,8 @@ Things to note:
 * `[maxquantity]` does not do anything, just returns the parsed value. 
    The assumption is that the caller might evaluate all rules against all players items to understand if it should be kept or not,
    if for example `[maxquantity] == 2` yet 3 items match the same rule.
+* Functions require explicit ahead of time registration (`matcher.RegisterFunction("foo", i => i.Level * 2f)`), and expected usage is `<function name>(item)` (i.e. `foo(item)`).
+  So you can do `[merctier] == me.level * 2 * tierscore(item)`
 
 ### Debugging
 
