@@ -8,10 +8,13 @@ grammar Nip;
 flagProperty: FLAG;
 affixProperty: AFFIX;
 stat: IDENTIFIER | INTEGER;
+meProperty: IDENTIFIER;
 property: IDENTIFIER;
 maxQuantity: MAXQUANTITY;
 tier: TIER;
 mercTier: MERCTIER;
+charmTier: CHARMTIER;
+swapTier: SWAPTIER;
 
 // Right hand side
 number: INTEGER | FLOAT;
@@ -21,6 +24,7 @@ statExpr
     : statExpr op=(MUL | DIV) statExpr #statMulDivRule
     | statExpr op=(ADD | SUB) statExpr #statAddSubRule
     | op=(ADD | SUB)? '['stat']' #statNameRule
+    | op=(ADD | SUB)? 'me.'meProperty #statMeRule
     | op=(ADD | SUB)? number #statNumberRule
     | op=(ADD | SUB)? '('statExpr')' #statExprParenRule
     ;
@@ -34,6 +38,7 @@ statRule
 // Because we peek at the value
 propertyRule    
     : '['flagProperty']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propFlagRule // This is special because it's actually [flag]&value == value
+    | 'me.'meProperty op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propMeRule
     | '['affixProperty']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propAffixRule // This is special because it creates a chain of OR's, (i.e, [prefix] == 1 turns into [prefix0] == 1 || [prefix1] == 1 || [prefix2] == 1)
     | '['property']' op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propRelationalRule
     | property op=(EQ | NEQ | GT | GTE | LT | LTE) numberOrAlias #propRelationalRule
@@ -46,6 +51,8 @@ additionalRule
     : '['maxQuantity']' op=EQ statExpr #additionalMaxQuantityRule
     | '['tier']' op=EQ statExpr #additionalTierRule
     | '['mercTier']' op=EQ statExpr #additionalMercTierRule
+    | '['charmTier']' op=EQ statExpr #additionalCharmTierRule
+    | '['swapTier']' op=EQ statExpr #additionalSwapTierRule
     | additionalRule op=(AND | OR) additionalRule #additionalLogicalRule
     | '('additionalRule')' #additionalParenRule
     ;
@@ -64,6 +71,8 @@ AFFIX: ('prefix' | 'suffix');
 MAXQUANTITY: 'maxquantity';
 TIER: 'tier';
 MERCTIER: 'merctier';
+CHARMTIER: 'charmtier';
+SWAPTIER: 'swaptier';
 FLOAT: DIGIT+ '.' DIGIT+;
 INTEGER: DIGIT+;
 IDENTIFIER: LETTER(LETTER | DIGIT | QUOTE | COMMA)*;

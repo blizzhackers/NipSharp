@@ -41,12 +41,13 @@ It will be clear what cases are not supported, but the TL;DR of it is:
     * `name == scissorssuwayyah` which is missing the `[]`. Could be fixed, but doesn't really make much sense.
     * `[type] == ringmail` where `ringmail` is actually a `[name]` not a `[type]`.
     * Genuinely invalid aliases `claws` instead of `claw`, etc.
-* `me` syntax. Support could be added by allowing to pass in additional values.
-* `[tier]` and `[merctier]`. They are parsed, but always evaluate to true, as I am not sure how they are supposed to be
-  used in the context of a pickit.
-* `[maxquantity]` is currently implemented in a questionable way. Effectively it requires to pass in all other items
-  that the player has, in order to work out if `[maxquantity]` has been breached. Kolbot code is quite hard to follow to
-  fully understand how it's used.
+
+Things to note:
+
+* `[tier]`, `[merctier]`, `[charmtier]` and `[swaptier]` just return the computed numeric values.
+* `[maxquantity]` does not do anything, just returns the parsed value. 
+   The assumption is that the caller might evaluate all rules against all players items to understand if it should be kept or not,
+   if for example `[maxquantity] == 2` yet 3 items match the same rule.
 
 ### Debugging
 

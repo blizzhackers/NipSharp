@@ -168,6 +168,40 @@ namespace NipSharp.Test
         }
 
         [Test]
+        public void TestMeCases()
+        {
+            matcher.AddRule("[name] == minormanapotion && me.charlvl < 12 # # [merctier] == me.charlvl * 2");
+            var result = matcher.Match(
+                new FakeItem
+                {
+                    Name = NipAliases.ClassId["minormanapotion"],
+                },
+                new FakeMe
+                {
+                    Level = 9
+                }
+            );
+
+            Assert.AreEqual(Outcome.Keep, result.Outcome);
+            Assert.AreEqual(18, result.MercTier);
+
+
+            result = matcher.Match(
+                new FakeItem
+                {
+                    Name = NipAliases.ClassId["minormanapotion"],
+                },
+                new FakeMe
+                {
+                    Level = 12
+                }
+            );
+
+            Assert.AreEqual(Outcome.Sell, result.Outcome);
+            Assert.AreEqual(24, result.MercTier);
+        }
+
+        [Test]
         public void TestBlizzhackerPickits()
         {
             //Assert.Ignore();

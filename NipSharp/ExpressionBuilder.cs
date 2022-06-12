@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
@@ -8,18 +9,23 @@ namespace NipSharp
 {
     public class ExpressionBuilder : NipBaseVisitor<Expression>
     {
-        private static Expression IdentifiedFlag = Expression.Constant(NipAliases.Flag["identified"]);
-        private static Expression Sell = Expression.Constant(Outcome.Sell);
-        private static Expression Keep = Expression.Constant(Outcome.Keep);
-        private static Expression Identify = Expression.Constant(Outcome.Identify);
+        private static readonly Expression IdentifiedFlag = Expression.Constant(NipAliases.Flag["identified"]);
+        private static readonly Expression Sell = Expression.Constant(Outcome.Sell);
+        private static readonly Expression DefaultSell = Expression.Constant(new Result { Outcome = Outcome.Sell });
+        private static readonly Expression Keep = Expression.Constant(Outcome.Keep);
+        private static readonly Expression Identify = Expression.Constant(Outcome.Identify);
 
+        private readonly ParameterExpression _result;
         private readonly ParameterExpression _valueBag;
+        private readonly ParameterExpression _meBag;
 
-        public ExpressionBuilder(ParameterExpression valueBag)
+        public ExpressionBuilder(ParameterExpression result, ParameterExpression valueBag, ParameterExpression meBag)
         {
             // This is a bit of a witch-craft. We create a variable which will store the <string, float> values for each of the properties/item stats.
-            // This will then be used when evaluating the expression tree, but will be passed down as part of the lambda block. 
+            // This will then be used when evaluating the expression tree, but will be passed down as part of the lambda block.
+            _result = result;
             _valueBag = valueBag;
+            _meBag = meBag;
         }
 
         public override Expression VisitNumber(NipParser.NumberContext context)
@@ -33,29 +39,41 @@ namespace NipSharp
             // type of property it is, so we'd know which alias table to look at.
             // This could be avoided with more grammar (and more code), by having separate rules for each property type.
             var maybePropNameNode = context.Parent.GetChild(1).GetChild(0);
+            if (maybePropNameNode == null)
+            {
+                // Bad grammar somehow.
+                throw new ApplicationException($"Other side of the expression is not a terminal node");
+            }
+
             if (maybePropNameNode is not ITerminalNode propNameNode)
             {
                 // Bad grammar somehow.
                 throw new ApplicationException($"Expected a terminal node at {maybePropNameNode.GetText()}");
             }
 
+            var isMeProperty = context.Parent.GetChild(0).GetText() == "me.";
+
             var propName = propNameNode.GetText();
 
-            var aliases = propName switch
+            var aliases = new Dictionary<string, int>();
+            if (!isMeProperty)
             {
-                "type" => NipAliases.Type,
-                "name" => NipAliases.ClassId,
-                "class" => NipAliases.Class,
-                "color" => NipAliases.Color,
-                "quality" => NipAliases.Quality,
-                "flag" => NipAliases.Flag,
-                // Makes no sense.
-                "level" => new(),
-                // Needs access to data tables to do it properly.
-                "prefix" => new(),
-                "suffix" => new(),
-                _ => throw new ArgumentOutOfRangeException(nameof(propName), propName),
-            };
+                aliases = propName switch
+                {
+                    "type" => NipAliases.Type,
+                    "name" => NipAliases.ClassId,
+                    "class" => NipAliases.Class,
+                    "color" => NipAliases.Color,
+                    "quality" => NipAliases.Quality,
+                    "flag" => NipAliases.Flag,
+                    // Makes no sense.
+                    "level" => new(),
+                    // Needs access to data tables to do it properly.
+                    "prefix" => new(),
+                    "suffix" => new(),
+                    _ => throw new ArgumentOutOfRangeException(nameof(propName), propName),
+                };
+            }
 
             var value = context.GetText();
             if (float.TryParse(value, out float numericValue))
@@ -82,6 +100,21 @@ namespace NipSharp
             var checkIfExists = Expression.Call(_valueBag, "ContainsKey", null, Expression.Constant(variable));
             // _valueBag[variable]
             var getValue = Expression.Property(_valueBag, "Item", Expression.Constant(variable));
+            // checkIfExists ? getValue : defaultValue;
+            return Expression.Condition(checkIfExists, getValue, Expression.Constant(defaultValue));
+        }
+
+        // Use 0 as default, as if the stat is missing, it's value is zero.
+        // However, there are some interesting cases if you forget to add stats, namely item level requirement.
+        // Then a ton of checks will start passing that.
+        private Expression GetMeValue(string variable, float defaultValue = 0)
+        {
+            // This is grim, as C# does not have GetOrDefault (only as extension which are not supported in lambda),
+            // and TryGetValue is cancer.
+            // _meBag.ContainsKey(variable)
+            var checkIfExists = Expression.Call(_meBag, "ContainsKey", null, Expression.Constant(variable));
+            // _meBag[variable]
+            var getValue = Expression.Property(_meBag, "Item", Expression.Constant(variable));
             // checkIfExists ? getValue : defaultValue;
             return Expression.Condition(checkIfExists, getValue, Expression.Constant(defaultValue));
         }
@@ -227,37 +260,17 @@ namespace NipSharp
                 Expression.And(Expression.Convert(GetValue("flag"), typeof(int)), IdentifiedFlag), IdentifiedFlag
             );
 
+            // Always evaluates to true, but has side-effects, setting values on result object.
             var additionalMatch = context.additionalRule() == null
                 ? Expression.Constant(true)
                 : Visit(context.additionalRule());
 
-            /*
-            if (propertyMatch)
-            {
-                if (statsMatch)
-                {
-                    if (additionalMatch)
-                    {
-                        return "keep"
-                    }
-                    return "sell"
-                }
-                if (isIdentified) {
-                    return sell;   
-                }   
-                return identify             
-            }
-            */
 
-            return Expression.Condition(
+            var outcome = Expression.Condition(
                 propertyMatch,
                 Expression.Condition(
                     statMatch,
-                    Expression.Condition(
-                        additionalMatch,
-                        Keep,
-                        Sell
-                    ),
+                    Keep,
                     Expression.Condition(
                         isIdentified,
                         Sell,
@@ -266,24 +279,51 @@ namespace NipSharp
                 ),
                 Sell
             );
+
+            return Expression.Block(
+                Expression.Assign(_result, Expression.New(typeof(Result))),
+                additionalMatch,
+                Expression.Assign(Expression.PropertyOrField(_result, "Outcome"), outcome),
+                _result
+            );
         }
 
         public override Expression VisitAdditionalMaxQuantityRule(NipParser.AdditionalMaxQuantityRuleContext context)
         {
-            return Expression.LessThan(GetValue("currentquantity"), Visit(context.statExpr()));
+            var result = Visit(context.statExpr());
+            return Expression.Block(
+                Expression.Assign(Expression.PropertyOrField(_result, "MaxQuantity"), result),
+                Expression.Constant(true)
+            );
         }
 
         public override Expression VisitAdditionalMercTierRule(NipParser.AdditionalMercTierRuleContext context)
         {
-            // TODO: Not sure what to do with this
-            return Expression.Constant(true);
+            var result = Visit(context.statExpr());
+            return Expression.Block(
+                Expression.Assign(Expression.PropertyOrField(_result, "MercTier"), result),
+                Expression.Constant(true)
+            );
         }
 
         public override Expression VisitAdditionalTierRule(NipParser.AdditionalTierRuleContext context)
         {
-            // TODO: Not sure what to do with this
-            return Expression.Constant(true);
+            var result = Visit(context.statExpr());
+            return Expression.Block(
+                Expression.Assign(Expression.PropertyOrField(_result, "Tier"), result),
+                Expression.Constant(true)
+            );
         }
+
+        public override Expression VisitAdditionalCharmTierRule(NipParser.AdditionalCharmTierRuleContext context)
+        {
+            var result = Visit(context.statExpr());
+            return Expression.Block(
+                Expression.Assign(Expression.PropertyOrField(_result, "CharmTier"), result),
+                Expression.Constant(true)
+            );
+        }
+
 
         public override Expression VisitAdditionalLogicalRule(NipParser.AdditionalLogicalRuleContext context)
         {
@@ -293,7 +333,29 @@ namespace NipSharp
         public override Expression VisitLine(NipParser.LineContext context)
         {
             var child = context.GetChild(0);
-            return child.ChildCount == 0 ? Sell : Visit(context.nipRule());
+            return child.ChildCount == 0 ? DefaultSell : Visit(context.nipRule());
+        }
+
+        public override Expression VisitStatMeRule(NipParser.StatMeRuleContext context)
+        {
+            var exp = Visit(context.meProperty());
+            if (context.op?.Type == NipParser.SUB)
+            {
+                return Expression.Negate(exp);
+            }
+
+            return exp;
+        }
+
+        public override Expression VisitMeProperty(NipParser.MePropertyContext context)
+        {
+            var name = context.GetText();
+            return GetMeValue(name);
+        }
+
+        public override Expression VisitPropMeRule(NipParser.PropMeRuleContext context)
+        {
+            return Op(context.op, Visit(context.meProperty()), Visit(context.numberOrAlias()));
         }
 
         private Expression Op(IToken op, Expression left, Expression right)

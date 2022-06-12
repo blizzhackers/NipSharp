@@ -5,7 +5,7 @@ namespace NipSharp
 {
     public readonly struct Rule
     {
-        public Func<Dictionary<string, float>, Outcome> Matcher { get; init; }
+        public Func<Dictionary<string, float>, Dictionary<string, float>, Result> Matcher { get; init; }
         public string Line { get; init; }
     }
 }

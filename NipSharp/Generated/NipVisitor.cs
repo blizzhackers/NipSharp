@@ -51,6 +51,12 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitStat([NotNull] NipParser.StatContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="NipParser.meProperty"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMeProperty([NotNull] NipParser.MePropertyContext context);
+	/// <summary>
 	/// Visit a parse tree produced by <see cref="NipParser.property"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -74,6 +80,18 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitMercTier([NotNull] NipParser.MercTierContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="NipParser.charmTier"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCharmTier([NotNull] NipParser.CharmTierContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="NipParser.swapTier"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSwapTier([NotNull] NipParser.SwapTierContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="NipParser.number"/>.
 	/// </summary>
@@ -107,6 +125,13 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitStatNameRule([NotNull] NipParser.StatNameRuleContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>statMeRule</c>
+	/// labeled alternative in <see cref="NipParser.statExpr"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStatMeRule([NotNull] NipParser.StatMeRuleContext context);
 	/// <summary>
 	/// Visit a parse tree produced by the <c>statNumberRule</c>
 	/// labeled alternative in <see cref="NipParser.statExpr"/>.
@@ -164,6 +189,13 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitPropRelationalRule([NotNull] NipParser.PropRelationalRuleContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>propMeRule</c>
+	/// labeled alternative in <see cref="NipParser.propertyRule"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPropMeRule([NotNull] NipParser.PropMeRuleContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>propAffixRule</c>
 	/// labeled alternative in <see cref="NipParser.propertyRule"/>.
 	/// </summary>
@@ -199,6 +231,13 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitAdditionalLogicalRule([NotNull] NipParser.AdditionalLogicalRuleContext context);
 	/// <summary>
+	/// Visit a parse tree produced by the <c>additionalCharmTierRule</c>
+	/// labeled alternative in <see cref="NipParser.additionalRule"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAdditionalCharmTierRule([NotNull] NipParser.AdditionalCharmTierRuleContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>additionalTierRule</c>
 	/// labeled alternative in <see cref="NipParser.additionalRule"/>.
 	/// </summary>
@@ -212,6 +251,13 @@ public interface INipVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitAdditionalMaxQuantityRule([NotNull] NipParser.AdditionalMaxQuantityRuleContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>additionalSwapTierRule</c>
+	/// labeled alternative in <see cref="NipParser.additionalRule"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAdditionalSwapTierRule([NotNull] NipParser.AdditionalSwapTierRuleContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="NipParser.nipRule"/>.
 	/// </summary>

@@ -57,18 +57,25 @@ namespace NipSharp
                 var parser = new NipParser(tokens, TextWriter.Null, TextWriter.Null);
                 var lineExpression = parser.line();
 
+                var result = Expression.Parameter(typeof(Result), "result");
                 var valueBag = Expression.Parameter(
                     typeof(Dictionary<string, float>), "valueBag"
                 );
-                var matchExpression = new ExpressionBuilder(valueBag).Visit(lineExpression);
+                var meBag = Expression.Parameter(
+                    typeof(Dictionary<string, float>), "meBag"
+                );
+                var matchExpression = new ExpressionBuilder(result, valueBag, meBag).Visit(lineExpression);
 
-                ParameterExpression result = Expression.Parameter(typeof(Outcome), "result");
                 BlockExpression block = Expression.Block(
                     new[] { result },
                     Expression.Assign(result, matchExpression),
                     result
                 );
-                var expression = Expression.Lambda<Func<Dictionary<string, float>, Outcome>>(block, valueBag);
+                var expression =
+                    Expression.Lambda<Func<Dictionary<string, float>, Dictionary<string, float>, Result>>(
+                        block, valueBag, meBag
+                    );
+
                 var ruleLambda = expression.Compile();
                 _rules.Add(
                     new Rule
@@ -88,46 +95,70 @@ namespace NipSharp
             }
         }
 
-        public Result Match(IItem item, IEnumerable<IItem> otherItems = null)
+        public IEnumerable<Result> IterateResults(IItem item, IMe me = null)
         {
-            otherItems ??= Array.Empty<IItem>();
             var valueBag = CreateValueBag(item);
-            var otherValuesBags = otherItems.Select(CreateValueBag).ToList();
-
-            var outcome = Outcome.Sell;
-            string outcomeLine = null;
+            var meBag = CreateMeBag(me);
 
             foreach (Rule rule in _rules)
             {
-                int otherCount = otherValuesBags.Count(o => rule.Matcher.Invoke(o) == Outcome.Keep);
-                valueBag["currentquantity"] = otherCount;
-                switch (rule.Matcher.Invoke(valueBag))
+                var matchResult = rule.Matcher.Invoke(valueBag, meBag);
+                matchResult.Line = rule.Line;
+                yield return matchResult;
+            }
+        }
+
+        public Result Match(IItem item, IMe me = null)
+        {
+            Result? bestSoFar = null;
+            foreach (var result in IterateResults(item, me))
+            {
+                switch (result.Outcome)
                 {
                     case Outcome.Keep:
-                        return new Result
-                        {
-                            Outcome = Outcome.Keep,
-                            Line = rule.Line,
-                        };
+                        return result;
                     case Outcome.Identify:
-                        if (outcome == Outcome.Sell)
+                        if (bestSoFar?.Outcome == Outcome.Sell)
                         {
-                            outcome = Outcome.Identify;
-                            outcomeLine = rule.Line;
+                            bestSoFar = result;
                         }
 
                         break;
                     case Outcome.Sell:
+                        if (bestSoFar == null)
+                        {
+                            bestSoFar = result;
+                        }
+
                         break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
                 }
             }
 
-            return new Result
+            return bestSoFar ?? new Result
             {
-                Outcome = outcome,
-                Line = outcomeLine,
+                Outcome = Outcome.Sell
+            };
+        }
+
+        private Dictionary<string, float> CreateMeBag(IMe me)
+        {
+            if (me == null)
+            {
+                return new()
+                {
+                    { "act", float.NaN },
+                    { "charlvl", float.NaN },
+                    { "diff", float.NaN },
+                    { "gold", float.NaN },
+                };
+            }
+
+            return new()
+            {
+                { "act", me.Act },
+                { "charlvl", me.Level },
+                { "diff", me.Difficulty },
+                { "gold", me.Gold },
             };
         }
 
